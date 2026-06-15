@@ -20,7 +20,7 @@ export interface PolicyAnalysis {
 }
 
 export async function analyzePolicy(pdfText: string): Promise<PolicyAnalysis> {
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
 
   const prompt = `You are an insurance expert.
 

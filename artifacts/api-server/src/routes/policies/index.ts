@@ -109,12 +109,28 @@ router.post("/policies/upload", upload.single("pdf"), async (req: Request, res: 
     }
 
     const message = err instanceof Error ? err.message : "Unknown error";
+
     if (message.includes("Only PDF")) {
       res.status(400).json({ error: message });
       return;
     }
 
-    res.status(500).json({ error: "Failed to analyze policy. Please try again." });
+    if (message.includes("429") || message.includes("Too Many Requests") || message.includes("quota")) {
+      res.status(429).json({ error: "Gemini API quota exceeded. Your free-tier limit has been reached. Please wait a minute and try again, or enable billing at https://ai.google.dev/gemini-api/docs/rate-limits" });
+      return;
+    }
+
+    if (message.includes("403") || message.includes("API_KEY") || message.includes("invalid") || message.includes("API key")) {
+      res.status(403).json({ error: "Invalid Gemini API key. Please check your GEMINI_API_KEY in Replit Secrets." });
+      return;
+    }
+
+    if (message.includes("404") || message.includes("not found for API version")) {
+      res.status(502).json({ error: "The AI model is temporarily unavailable. Please try again in a moment." });
+      return;
+    }
+
+    res.status(500).json({ error: `Failed to analyze policy: ${message.slice(0, 200)}` });
   }
 });
 
