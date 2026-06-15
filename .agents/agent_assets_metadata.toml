@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "P26J9DJ3JYOnsgehBiazm"
+uri = "file://README.md"
+type = "text"
+title = "Insurance Policy Simplifier — Full Documentation"
