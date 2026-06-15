@@ -7,6 +7,32 @@ if (!process.env.GEMINI_API_KEY) {
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
+const RETRYABLE_CODES = [429, 500, 502, 503, 504];
+
+async function withRetry<T>(fn: () => Promise<T>, maxAttempts = 4): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      const status = (err as { status?: number }).status;
+      const msg = (err as { message?: string }).message ?? "";
+      const isRetryable =
+        (status != null && RETRYABLE_CODES.includes(status)) ||
+        msg.includes("503") || msg.includes("502") || msg.includes("UNAVAILABLE") ||
+        msg.includes("overloaded") || msg.includes("high demand");
+
+      if (!isRetryable || attempt === maxAttempts) break;
+
+      const delayMs = Math.min(1000 * 2 ** (attempt - 1), 8000); // 1s, 2s, 4s, 8s
+      logger.warn({ attempt, delayMs, status }, "Gemini transient error — retrying");
+      await new Promise(r => setTimeout(r, delayMs));
+    }
+  }
+  throw lastError;
+}
+
 export interface PolicyAnalysis {
   policy_name: string;
   policy_type: string;
@@ -46,10 +72,9 @@ ${pdfText.slice(0, 50000)}`;
 
   logger.info("Sending policy text to Gemini for analysis");
 
-  const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
-    contents: prompt,
-  });
+  const response = await withRetry(() =>
+    ai.models.generateContent({ model: "gemini-2.5-flash", contents: prompt })
+  );
 
   const responseText = response.text?.trim() ?? "";
 
@@ -81,10 +106,9 @@ ${pdfText.slice(0, 50000)}`;
 export async function generateExplanation(prompt: string): Promise<string> {
   logger.info("Generating multilingual explanation via Gemini");
 
-  const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
-    contents: prompt,
-  });
+  const response = await withRetry(() =>
+    ai.models.generateContent({ model: "gemini-2.5-flash", contents: prompt })
+  );
 
   return response.text?.trim() ?? "";
 }
