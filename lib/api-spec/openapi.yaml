@@ -3,13 +3,15 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Insurance Policy Simplifier API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: policies
+    description: Insurance policy analysis
 paths:
   /healthz:
     get:
@@ -24,6 +26,56 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /policies:
+    get:
+      operationId: listPolicies
+      tags: [policies]
+      summary: List all analyzed policies
+      responses:
+        "200":
+          description: List of policies
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Policy"
+
+  /policies/{id}:
+    get:
+      operationId: getPolicy
+      tags: [policies]
+      summary: Get a single analyzed policy
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Policy details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Policy"
+        "404":
+          description: Not found
+
+  /policies/stats:
+    get:
+      operationId: getPolicyStats
+      tags: [policies]
+      summary: Get aggregate stats across all analyzed policies
+      responses:
+        "200":
+          description: Stats summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyStats"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +86,85 @@ components:
       required:
         - status
 
+    Policy:
+      type: object
+      required:
+        - id
+        - filename
+        - policy_name
+        - policy_type
+        - simple_explanation
+        - claim_difficulty_score
+        - coverage
+        - exclusions
+        - claim_process
+        - important_warnings
+        - waiting_periods
+        - created_at
+      properties:
+        id:
+          type: integer
+        filename:
+          type: string
+        policy_name:
+          type: string
+        policy_type:
+          type: string
+        simple_explanation:
+          type: string
+        claim_difficulty_score:
+          type: string
+        coverage:
+          type: array
+          items:
+            type: string
+        exclusions:
+          type: array
+          items:
+            type: string
+        claim_process:
+          type: array
+          items:
+            type: string
+        important_warnings:
+          type: array
+          items:
+            type: string
+        waiting_periods:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+
+    PolicyStats:
+      type: object
+      required:
+        - total_policies
+        - policy_types
+        - avg_difficulty_score
+        - recent_policies
+      properties:
+        total_policies:
+          type: integer
+        policy_types:
+          type: array
+          items:
+            $ref: "#/components/schemas/PolicyTypeCount"
+        avg_difficulty_score:
+          type: string
+        recent_policies:
+          type: array
+          items:
+            $ref: "#/components/schemas/Policy"
+
+    PolicyTypeCount:
+      type: object
+      required:
+        - type
+        - count
+      properties:
+        type:
+          type: string
+        count:
+          type: integer
