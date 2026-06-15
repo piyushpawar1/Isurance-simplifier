@@ -1,11 +1,11 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { logger } from "./logger";
 
 if (!process.env.GEMINI_API_KEY) {
   throw new Error("GEMINI_API_KEY environment variable is not set.");
 }
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 export interface PolicyAnalysis {
   policy_name: string;
@@ -20,8 +20,6 @@ export interface PolicyAnalysis {
 }
 
 export async function analyzePolicy(pdfText: string): Promise<PolicyAnalysis> {
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
-
   const prompt = `You are an insurance expert.
 
 Analyze this insurance policy and explain it in language understandable by a 10th-grade student.
@@ -48,8 +46,12 @@ ${pdfText.slice(0, 50000)}`;
 
   logger.info("Sending policy text to Gemini for analysis");
 
-  const result = await model.generateContent(prompt);
-  const responseText = result.response.text().trim();
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: prompt,
+  });
+
+  const responseText = response.text?.trim() ?? "";
 
   const cleaned = responseText
     .replace(/^```json\s*/i, "")
