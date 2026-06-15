@@ -1,0 +1,137 @@
+You are a senior full-stack developer and AI engineer.
+
+Upgrade the Insurance Simplifier project to include AI-powered policy analysis.
+
+Tech Stack:
+
+* Python Flask
+* HTML/CSS/JavaScript
+* Google Gemini API
+
+Project Goal:
+Allow users to upload insurance policy PDFs and receive an easy-to-understand explanation.
+
+Requirements:
+
+1. PDF Upload
+
+* Accept PDF files
+* Validate file type
+* Store temporarily
+* Extract text from PDF
+
+Use:
+
+* PyPDF2 or pdfplumber
+
+2. AI Processing
+
+Use Google Gemini API.
+
+After PDF text extraction:
+
+Send the extracted policy text to Gemini with this instruction:
+
+"You are an insurance expert.
+
+Analyze this insurance policy and explain it in language understandable by a 10th-grade student.
+
+Return JSON with:
+
+{
+'policy_name': '',
+'policy_type': '',
+'coverage': [],
+'exclusions': [],
+'claim_process': [],
+'important_warnings': [],
+'simple_explanation': '',
+'claim_difficulty_score': '',
+'waiting_periods': []
+}
+
+Avoid legal jargon.
+Use simple and concise language."
+
+3. Results Dashboard
+
+Display:
+
+Policy Summary
+Coverage
+Exclusions
+Claim Process
+Waiting Periods
+Important Warnings
+Simple Explanation
+
+Use professional cards.
+
+4. Additional Features
+
+Add:
+
+* Loading animation while AI is analyzing
+* Progress indicator
+* Error handling for invalid PDFs
+* Error handling for Gemini failures
+
+5. Multi-language Preparation
+
+Create architecture that allows future support for:
+
+* English
+* Hindi
+* Marathi
+
+6. Security
+
+* Limit PDF size
+* Validate uploads
+* Sanitize filenames
+* Store API keys in environment variables
+
+7. Environment Variables
+
+Use:
+
+GEMINI_API_KEY
+
+Never hardcode API keys.
+
+8. Project Structure
+
+Keep:
+
+app.py
+
+templates/
+index.html
+results.html
+
+static/
+style.css
+script.js
+
+uploads/
+
+requirements.txt
+
+.env.example
+
+README.md
+
+9. Deliverables
+
+Generate all code.
+
+Install required dependencies.
+
+Provide setup instructions.
+
+Automatically test:
+
+* Upload workflow
+* PDF extraction
+* Gemini integration
+* Results rendering
