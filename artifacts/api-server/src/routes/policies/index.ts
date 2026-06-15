@@ -97,7 +97,10 @@ router.post("/policies/upload", upload.single("pdf"), async (req: Request, res: 
       if (err) req.log.warn({ err }, "Failed to delete temp upload file");
     });
 
-    res.status(201).json(GetPolicyResponse.parse(policy));
+    res.status(201).json(GetPolicyResponse.parse({
+      ...policy,
+      created_at: policy.created_at.toISOString(),
+    }));
   } catch (err) {
     fs.unlink(filePath, () => {});
 
