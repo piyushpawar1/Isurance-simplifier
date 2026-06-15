@@ -61,6 +61,23 @@ export const GetPolicyResponse = zod.object({
 
 
 /**
+ * @summary Generate a spoken explanation of a policy in a chosen language
+ */
+export const ExplainPolicyParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ExplainPolicyBody = zod.object({
+  "language": zod.enum(['en', 'hi', 'mr'])
+})
+
+export const ExplainPolicyResponse = zod.object({
+  "text": zod.string(),
+  "language": zod.string()
+})
+
+
+/**
  * @summary Get aggregate stats across all analyzed policies
  */
 export const GetPolicyStatsResponse = zod.object({

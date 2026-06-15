@@ -14,8 +14,11 @@ import {
   GetPolicyResponse,
   ListPoliciesResponse,
   GetPolicyStatsResponse,
+  ExplainPolicyParams,
+  ExplainPolicyBody,
+  ExplainPolicyResponse,
 } from "@workspace/api-zod";
-import { analyzePolicy } from "../../lib/gemini";
+import { analyzePolicy, generateExplanation } from "../../lib/gemini";
 import { logger } from "../../lib/logger";
 
 const router: IRouter = Router();
@@ -135,6 +138,71 @@ router.post("/policies/upload", upload.single("pdf"), async (req: Request, res: 
 
     res.status(500).json({ error: `Failed to analyze policy: ${message.slice(0, 200)}` });
   }
+});
+
+router.post("/policies/:id/explain", async (req: Request, res: Response): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const params = ExplainPolicyParams.safeParse({ id: raw });
+  if (!params.success) {
+    res.status(400).json({ error: "Invalid policy ID" });
+    return;
+  }
+
+  const body = ExplainPolicyBody.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: "Invalid request body" });
+    return;
+  }
+
+  const [policy] = await db
+    .select()
+    .from(policiesTable)
+    .where(eq(policiesTable.id, params.data.id));
+
+  if (!policy) {
+    res.status(404).json({ error: "Policy not found" });
+    return;
+  }
+
+  const { language } = body.data;
+
+  const languageNames: Record<string, string> = {
+    en: "English",
+    hi: "Hindi",
+    mr: "Marathi",
+  };
+
+  const langName = languageNames[language] ?? "English";
+
+  const prompt = `You are a friendly insurance advisor speaking to a customer.
+
+Explain this insurance policy in ${langName} in a warm, conversational tone — as if speaking aloud to someone who has never read an insurance document before.
+
+Cover these key points naturally in your explanation:
+1. What this policy is and what it does for the person
+2. The most important things it covers
+3. The most important things it does NOT cover
+4. How to make a claim if needed
+5. Any important warnings or waiting periods
+
+Policy details:
+- Name: ${policy.policy_name}
+- Type: ${policy.policy_type}
+- Summary: ${policy.simple_explanation}
+- Coverage: ${policy.coverage.join("; ")}
+- Exclusions: ${policy.exclusions.join("; ")}
+- Claim process: ${policy.claim_process.join("; ")}
+- Waiting periods: ${policy.waiting_periods.join("; ")}
+- Warnings: ${policy.important_warnings.join("; ")}
+- Difficulty: ${policy.claim_difficulty_score}
+
+${language !== "en" ? `IMPORTANT: Your entire response must be in ${langName} only. Do not use any English words except for proper nouns like the policy name.` : ""}
+
+Keep the explanation between 150-250 words. Make it conversational and easy to understand. Do not use bullet points or headers — write it as natural spoken paragraphs.`;
+
+  const explanation = await generateExplanation(prompt);
+
+  res.json(ExplainPolicyResponse.parse({ text: explanation, language }));
 });
 
 router.get("/policies/stats", async (req: Request, res: Response): Promise<void> => {

@@ -1,23 +1,159 @@
-import React from "react";
+import { useState, useRef, useCallback } from "react";
 import { useParams, Link } from "wouter";
-import { useGetPolicy } from "@workspace/api-client-react";
+import { useGetPolicy, getGetPolicyQueryKey } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle, ArrowLeft, CheckCircle2, XCircle, Info, FileText, FileWarning, HelpCircle } from "lucide-react";
-import { getGetPolicyQueryKey } from "@workspace/api-client-react";
+import { Button } from "@/components/ui/button";
+import { AlertCircle, ArrowLeft, CheckCircle2, XCircle, Info, FileText, FileWarning, HelpCircle, Volume2, VolumeX, Loader2 } from "lucide-react";
+
+const LANGUAGES = [
+  { code: "en", label: "English", speechLang: "en-IN" },
+  { code: "hi", label: "हिंदी", speechLang: "hi-IN" },
+  { code: "mr", label: "मराठी", speechLang: "mr-IN" },
+];
+
+function VoiceExplainer({ policyId }: { policyId: number }) {
+  const [selectedLang, setSelectedLang] = useState("en");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  const stop = useCallback(() => {
+    window.speechSynthesis.cancel();
+    setIsSpeaking(false);
+  }, []);
+
+  const listen = useCallback(async () => {
+    if (isSpeaking) { stop(); return; }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch(`${import.meta.env.BASE_URL}api/policies/${policyId}/explain`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ language: selectedLang }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error((data as { error?: string }).error ?? "Failed to generate explanation");
+      }
+
+      const data = await res.json() as { text: string; language: string };
+
+      const lang = LANGUAGES.find(l => l.code === selectedLang);
+      const utterance = new SpeechSynthesisUtterance(data.text);
+      utterance.lang = lang?.speechLang ?? "en-IN";
+      utterance.rate = 0.9;
+      utterance.pitch = 1;
+
+      // Try to find a matching voice
+      const voices = window.speechSynthesis.getVoices();
+      const match = voices.find(v => v.lang.startsWith(lang?.speechLang?.split("-")[0] ?? "en"));
+      if (match) utterance.voice = match;
+
+      utterance.onend = () => setIsSpeaking(false);
+      utterance.onerror = () => setIsSpeaking(false);
+
+      utteranceRef.current = utterance;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
+      setIsSpeaking(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [isSpeaking, selectedLang, policyId, stop]);
+
+  return (
+    <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent shadow-sm">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-primary text-base">
+          <Volume2 className="w-5 h-5" />
+          Listen to Explanation
+        </CardTitle>
+        <CardDescription>
+          Get a spoken summary of this policy in your preferred language
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Language selector */}
+        <div className="flex flex-wrap gap-2">
+          {LANGUAGES.map(lang => (
+            <button
+              key={lang.code}
+              data-testid={`lang-${lang.code}`}
+              onClick={() => { setSelectedLang(lang.code); stop(); setError(null); }}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-all ${
+                selectedLang === lang.code
+                  ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                  : "bg-background border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"
+              }`}
+            >
+              {lang.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Play/stop button */}
+        <div className="flex items-center gap-3">
+          <Button
+            data-testid="btn-listen"
+            onClick={listen}
+            disabled={isLoading}
+            className="gap-2"
+            variant={isSpeaking ? "outline" : "default"}
+          >
+            {isLoading ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Generating...</>
+            ) : isSpeaking ? (
+              <><VolumeX className="w-4 h-4" /> Stop</>
+            ) : (
+              <><Volume2 className="w-4 h-4" /> Listen</>
+            )}
+          </Button>
+
+          {isSpeaking && (
+            <div className="flex items-center gap-1.5 text-sm text-primary">
+              <span className="flex gap-0.5 items-end h-4">
+                {[...Array(4)].map((_, i) => (
+                  <span
+                    key={i}
+                    className="w-1 bg-primary rounded-sm animate-pulse"
+                    style={{ height: `${40 + i * 20}%`, animationDelay: `${i * 0.15}s` }}
+                  />
+                ))}
+              </span>
+              Speaking…
+            </div>
+          )}
+        </div>
+
+        {error && (
+          <p className="text-sm text-destructive flex items-center gap-1.5">
+            <AlertCircle className="w-4 h-4 shrink-0" /> {error}
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function PolicyDetailPage() {
   const params = useParams();
   const policyId = params.id ? parseInt(params.id) : 0;
-  
-  // Only query if id is valid
-  const { data: policy, isLoading, isError } = useGetPolicy(policyId, { 
-    query: { 
+
+  const { data: policy, isLoading, isError } = useGetPolicy(policyId, {
+    query: {
       enabled: !!policyId,
-      queryKey: getGetPolicyQueryKey(policyId)
-    } 
+      queryKey: getGetPolicyQueryKey(policyId),
+    },
   });
 
   if (!policyId) {
@@ -70,7 +206,7 @@ export default function PolicyDetailPage() {
   return (
     <Layout>
       <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-        
+
         {/* Navigation */}
         <Link href="/policies" className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-4">
           <ArrowLeft className="w-4 h-4 mr-2" /> Back to all policies
@@ -81,7 +217,6 @@ export default function PolicyDetailPage() {
           <div className="absolute top-0 right-0 p-8 opacity-5">
             <FileText className="w-48 h-48" />
           </div>
-          
           <div className="relative z-10 flex flex-col md:flex-row gap-8 justify-between items-start md:items-center">
             <div className="space-y-4 max-w-2xl">
               <div className="flex items-center gap-3">
@@ -99,7 +234,6 @@ export default function PolicyDetailPage() {
                 {policy.simple_explanation}
               </p>
             </div>
-            
             <Card className="bg-background/80 backdrop-blur-md border-primary/20 shrink-0 w-full md:w-auto">
               <CardContent className="p-6 text-center">
                 <p className="text-sm text-muted-foreground font-semibold uppercase tracking-wider mb-2">Claim Difficulty</p>
@@ -111,12 +245,15 @@ export default function PolicyDetailPage() {
           </div>
         </div>
 
+        {/* Voice Explainer */}
+        <VoiceExplainer policyId={policyId} />
+
         {/* Important Warnings Banner */}
         {policy.important_warnings && policy.important_warnings.length > 0 && (
           <Card className="border-amber-200 bg-amber-50/50 dark:bg-amber-950/20 shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="text-amber-800 dark:text-amber-500 flex items-center gap-2 text-lg">
-                <FileWarning className="w-5 h-5" /> 
+                <FileWarning className="w-5 h-5" />
                 Important Warnings
               </CardTitle>
             </CardHeader>
@@ -133,10 +270,8 @@ export default function PolicyDetailPage() {
           </Card>
         )}
 
-        {/* Two Column Grid */}
+        {/* Coverage + Exclusions */}
         <div className="grid md:grid-cols-2 gap-8">
-          
-          {/* Coverage */}
           <Card className="shadow-sm border-primary/5 flex flex-col">
             <CardHeader className="bg-green-50/50 dark:bg-green-950/10 border-b pb-4">
               <CardTitle className="flex items-center gap-2 text-green-700 dark:text-green-500">
@@ -161,7 +296,6 @@ export default function PolicyDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Exclusions */}
           <Card className="shadow-sm border-primary/5 flex flex-col">
             <CardHeader className="bg-red-50/50 dark:bg-red-950/10 border-b pb-4">
               <CardTitle className="flex items-center gap-2 text-red-700 dark:text-red-500">
@@ -185,12 +319,10 @@ export default function PolicyDetailPage() {
               )}
             </CardContent>
           </Card>
-
         </div>
 
-        {/* Claim Process & Waiting Periods */}
+        {/* Claim Process + Waiting Periods */}
         <div className="grid md:grid-cols-5 gap-8">
-          
           <Card className="md:col-span-3 shadow-sm border-primary/5">
             <CardHeader className="bg-primary/5 border-b pb-4">
               <CardTitle className="flex items-center gap-2 text-primary">
@@ -240,9 +372,8 @@ export default function PolicyDetailPage() {
               )}
             </CardContent>
           </Card>
-
         </div>
-        
+
       </div>
     </Layout>
   );

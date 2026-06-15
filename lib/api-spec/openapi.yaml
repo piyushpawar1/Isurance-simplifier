@@ -63,6 +63,33 @@ paths:
         "404":
           description: Not found
 
+  /policies/{id}/explain:
+    post:
+      operationId: explainPolicy
+      tags: [policies]
+      summary: Generate a spoken explanation of a policy in a chosen language
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PolicyExplainRequest"
+      responses:
+        "200":
+          description: Spoken explanation text
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyExplanation"
+        "404":
+          description: Not found
+
   /policies/stats:
     get:
       operationId: getPolicyStats
@@ -157,6 +184,26 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Policy"
+
+    PolicyExplainRequest:
+      type: object
+      required:
+        - language
+      properties:
+        language:
+          type: string
+          enum: [en, hi, mr]
+
+    PolicyExplanation:
+      type: object
+      required:
+        - text
+        - language
+      properties:
+        text:
+          type: string
+        language:
+          type: string
 
     PolicyTypeCount:
       type: object

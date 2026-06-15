@@ -36,3 +36,21 @@ export interface PolicyStats {
   recent_policies: Policy[];
 }
 
+export type PolicyExplainRequestLanguage = typeof PolicyExplainRequestLanguage[keyof typeof PolicyExplainRequestLanguage];
+
+
+export const PolicyExplainRequestLanguage = {
+  en: 'en',
+  hi: 'hi',
+  mr: 'mr',
+} as const;
+
+export interface PolicyExplainRequest {
+  language: PolicyExplainRequestLanguage;
+}
+
+export interface PolicyExplanation {
+  text: string;
+  language: string;
+}
+

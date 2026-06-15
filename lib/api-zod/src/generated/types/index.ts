@@ -8,5 +8,8 @@
 
 export * from './healthStatus';
 export * from './policy';
+export * from './policyExplainRequest';
+export * from './policyExplainRequestLanguage';
+export * from './policyExplanation';
 export * from './policyStats';
 export * from './policyTypeCount';

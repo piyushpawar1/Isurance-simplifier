@@ -66,7 +66,7 @@ ${pdfText.slice(0, 50000)}`;
   }
 
   return {
-    policy_name: parsed.policy_name || "Unknown Policy",
+    policy_name: parsed.policy_name ?? "Unknown Policy",
     policy_type: parsed.policy_type || "General Insurance",
     coverage: Array.isArray(parsed.coverage) ? parsed.coverage : [],
     exclusions: Array.isArray(parsed.exclusions) ? parsed.exclusions : [],
@@ -76,4 +76,15 @@ ${pdfText.slice(0, 50000)}`;
     claim_difficulty_score: parsed.claim_difficulty_score || "Unknown",
     waiting_periods: Array.isArray(parsed.waiting_periods) ? parsed.waiting_periods : [],
   };
+}
+
+export async function generateExplanation(prompt: string): Promise<string> {
+  logger.info("Generating multilingual explanation via Gemini");
+
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: prompt,
+  });
+
+  return response.text?.trim() ?? "";
 }

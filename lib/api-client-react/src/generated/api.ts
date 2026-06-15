@@ -6,11 +6,15 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
+  MutationFunction,
   QueryFunction,
   QueryKey,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
@@ -18,11 +22,13 @@ import type {
 import type {
   HealthStatus,
   Policy,
+  PolicyExplainRequest,
+  PolicyExplanation,
   PolicyStats
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
-import type { ErrorType } from '../custom-fetch';
+import type { ErrorType , BodyType } from '../custom-fetch';
 
 type AwaitedInput<T> = PromiseLike<T> | T;
 
@@ -264,6 +270,78 @@ export function useGetPolicy<TData = Awaited<ReturnType<typeof getPolicy>>, TErr
 
 
 
+
+export const getExplainPolicyUrl = (id: number,) => {
+
+
+
+
+  return `/api/policies/${id}/explain`
+}
+
+/**
+ * @summary Generate a spoken explanation of a policy in a chosen language
+ */
+export const explainPolicy = async (id: number,
+    policyExplainRequest: PolicyExplainRequest, options?: RequestInit): Promise<PolicyExplanation> => {
+
+  return customFetch<PolicyExplanation>(getExplainPolicyUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      policyExplainRequest,)
+  }
+);}
+
+
+
+
+export const getExplainPolicyMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof explainPolicy>>, TError,{id: number;data: BodyType<PolicyExplainRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof explainPolicy>>, TError,{id: number;data: BodyType<PolicyExplainRequest>}, TContext> => {
+
+const mutationKey = ['explainPolicy'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof explainPolicy>>, {id: number;data: BodyType<PolicyExplainRequest>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  explainPolicy(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ExplainPolicyMutationResult = NonNullable<Awaited<ReturnType<typeof explainPolicy>>>
+    export type ExplainPolicyMutationBody = BodyType<PolicyExplainRequest>
+    export type ExplainPolicyMutationError = ErrorType<void>
+
+    /**
+ * @summary Generate a spoken explanation of a policy in a chosen language
+ */
+export const useExplainPolicy = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof explainPolicy>>, TError,{id: number;data: BodyType<PolicyExplainRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof explainPolicy>>,
+        TError,
+        {id: number;data: BodyType<PolicyExplainRequest>},
+        TContext
+      > => {
+      return useMutation(getExplainPolicyMutationOptions(options));
+    }
 
 export const getGetPolicyStatsUrl = () => {
 
