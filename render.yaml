@@ -11,7 +11,7 @@ services:
     runtime: node
     plan: free
     rootDir: .
-    buildCommand: npm install -g pnpm && pnpm install --no-frozen-lockfile && pnpm --filter @workspace/api-server run build
+    buildCommand: corepack enable pnpm && pnpm install --no-frozen-lockfile && pnpm --filter @workspace/api-server run build
     startCommand: node --enable-source-maps ./artifacts/api-server/dist/index.mjs
     healthCheckPath: /api/healthz
     envVars:
@@ -34,7 +34,7 @@ services:
     runtime: static
     plan: free
     rootDir: .
-    buildCommand: npm install -g pnpm && pnpm install --no-frozen-lockfile && pnpm --filter @workspace/api-spec run codegen && pnpm --filter @workspace/insurance-simplifier exec vite build --config vite.render.config.ts
+    buildCommand: corepack enable pnpm && pnpm install --no-frozen-lockfile && pnpm --filter @workspace/api-spec run codegen && pnpm --filter @workspace/insurance-simplifier exec vite build --config vite.render.config.ts
     staticPublishPath: ./artifacts/insurance-simplifier/dist/public
     envVars:
       - key: VITE_API_BASE_URL
