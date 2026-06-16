@@ -33,7 +33,10 @@ function VoiceExplainer({ policyId }: { policyId: number }) {
     setError(null);
 
     try {
-      const res = await fetch(`${import.meta.env.BASE_URL}api/policies/${policyId}/explain`, {
+      const apiBase = import.meta.env.VITE_API_BASE_URL
+        ? `${import.meta.env.VITE_API_BASE_URL}/api/`
+        : `${import.meta.env.BASE_URL}api/`;
+      const res = await fetch(`${apiBase}policies/${policyId}/explain`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ language: selectedLang }),

@@ -78,7 +78,10 @@ export default function UploadPage() {
       const formData = new FormData();
       formData.append("pdf", file);
       
-      const response = await fetch(`${import.meta.env.BASE_URL}api/policies/upload`, {
+      const apiBase = import.meta.env.VITE_API_BASE_URL
+        ? `${import.meta.env.VITE_API_BASE_URL}/api/`
+        : `${import.meta.env.BASE_URL}api/`;
+      const response = await fetch(`${apiBase}policies/upload`, {
         method: "POST",
         body: formData,
       });
